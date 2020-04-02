@@ -1,0 +1,23 @@
+Package: IPM
+Title: Integrated Population Model
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given = "Yiran",
+           family = "Wang",
+           role = c("aut", "cre"),
+           email = "y3577wan@uwaterloo.ca",
+           comment = c(ORCID = "0000-0003-1158-8367")),
+      person(given = "Yumeng",
+           family = "Wang",
+           role = "ctb",
+           email = "y3496wan@uwaterloo.ca")
+      )
+Description: Provides functions for simulating the dynamic population using two models, summarizing the output from MCMC simulations, and calaulating the credible interval by parametric bootstrap.
+License: None
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Imports: 
+    simanalyse,
+    future,
+    coda
