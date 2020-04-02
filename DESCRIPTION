@@ -19,5 +19,6 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 Imports: 
     simanalyse,
+    sims,
     future,
     coda
