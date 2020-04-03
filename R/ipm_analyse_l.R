@@ -1,31 +1,47 @@
-# Contents of file `ipm_sim_l.R`
+# Contents of file `ipm_analyse_l.R`
 
-#' Simulate population by the true joint likelihood model
+#' Analysing the simulation by true joint likelihood model
 #'
-#' @param K a scalar, number of years.
-#' @param N.1 a scalar,size of initial population.
-#' @param sigma a scalar, standard deviation of count data.
-#' @param p K x 1 vector, recapture probability of every year.
-#' @param xi K x 1 vector, first-time capture probability of every year.
-#' @param f K x 1 vector, fecundity rate of every year.
-#' @param phi (K-1) x 1 vector, mortality rate of every year.
-#' @return data, the simulation resule
+#' @param data an nlists object, simulation dataset returned by ipm_sim_l.
+#' @param Plot a flag, indicates whether to save the traceplot and the density plot for MCMC outputs.
+#' @param priors a string of code to set the prior.
+#' @param maxtime a scalar, specifying the maximum time to spend on analysis.
+#' @param unit a character string specifying the units of time for \code{max.time}. See \code{difftime}.
+#' @param save a scalar, the number of (potentially thinned) samples to save.
+#' @param chain a scalar, the number of MCMC chains.
+#' @return a mcmcrs object, the MCMC outputs, and plots (If plot=TRUE).
 #' @export
 
-ipm_sim_l <- function(K=4,
-                      N.1=500,
-                      sigma=30,
-                      p=rep(0.8,3),
-                      xi=rep(0.8,4),
-                      f=rep(2,4),
-                      phi=rep(0.9,3)){
+
+ipm_analyse_l <- function(data,
+                        Plot=FALSE,
+                        priors=NULL,
+                        maxtime=10,
+                        unit="mins",
+                        save=20000L,
+                        chain=3){
+
+  if(is.null(priors)){
+    priors <- "N.1 <- round(N1)
+          N1 ~ dunif(0,2000)       # Initial total population
+          sigma ~ dunif(0,100)     # Standard deviation of counting number
+          for(i in 1:(K-1)){
+              p[i] ~ dbeta(1,1)    # Recapture probability
+              phi[i] ~ dbeta(1,1)  # Mortality rate
+          }
+          for(i in 1:K){
+              xi[i] ~ dbeta(1,1)   # First capture probability
+              f[i] ~ dunif(0,10)   # Fecundity rate
+          }
+    "
+  }
 
   ## True joint likelihood model
   truemod <- "
         # Year 1 Period 1 (Count Data)
         Nu[1] <- N.1                             # Nu[i] : Number of unmarked individuals in year i
         Nm[1] <- 0                               # Nm[i] : Number of marked individuals in year i
-        Nt[1] <- Nu[1] + Nm[1]                   # Nt[i] : Number of total population in year i
+        Nt[1] <- Nu[1] + Nm[1]                   # Nt[i,j] : Number of total population in year i
         Y[1] ~ dnorm(Nt[1],1/(sigma^2))        # Y[i] : Count number of population in year i
         # Year 1 Period 2 (Birth & Capture-recapture)
         B[1] ~ dpois(Nt[1]*f[1]/2)               # B[i] : Number of newborn in year i
@@ -96,7 +112,29 @@ ipm_sim_l <- function(K=4,
         Sr[K,K] <- C[K] + sum(M[1:(K-1),K])
   "
 
-  ## Simulation
-  data <- sims_simulate(truemod, constants=nlist(K=K), latent=NA, parameters=nlist(N.1=N.1, sigma=sigma, p=p, f=f, phi=phi, xi=xi))
-  return(data)
+
+  ## Process
+  data <- subset(data, pars=c("C","M","Y","K"))
+  K <- data[[1]]$K
+
+  ## Result
+  out <- simanalyse::sma_analyse_bayesian(data,
+                                          truemod,
+                                          priors,
+                                          monitor=c("p","f","N1","sigma","phi","xi"),
+                                          inits = list("N1"=500, f=rep(4,K),phi=rep(0.99,(K-1))),
+                                          #mode=sma_set_mode("paper", n.chains=chain, max.time=maxtime, units=unit, n.save=save))
+                                          mode=sma_set_mode("quick"))
+  out2 <- subset(mcmcr::as.mcmcrs(out), pars=c("p","f","N1","sigma","phi","xi"))
+
+  if(Plot){
+    pdf("plot.pdf")
+    plot(window(as.mcmc.list(out2[[1]])))
+    graphics.off()
+  }
+
+  return(out2)
 }
+
+
+
