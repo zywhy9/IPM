@@ -1,6 +1,8 @@
 # Contents of file `ipm_coverage.R`
 
-#' Calculate the Coverage Probability.
+#' Coverage probability
+#'
+#' Calculate the coverage probability.
 #'
 #' @param result an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.
 #' @param real an list object, specifying the real value using for simulation.

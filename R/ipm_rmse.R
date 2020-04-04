@@ -1,6 +1,8 @@
 # Contents of file `ipm_rmse.R`
 
-#' Calculate the Root Mean Square Error.
+#' Root mean square error
+#'
+#' Calculate the root mean square error.
 #'
 #' @param result an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.
 #' @param real an list object, specifying the real value using for simulation.

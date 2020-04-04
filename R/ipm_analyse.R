@@ -1,5 +1,7 @@
 # Contents of file `ipm_analyse.R`
 
+#' Analyse data using composite likelihood for a simulation study
+#'
 #' Using the composite likelihood model to analyse the simulation by true joint likelihood model.
 #'
 #' @param data an nlists object, simulation dataset returned by ipm_sim_l.

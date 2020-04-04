@@ -1,5 +1,7 @@
 # Contents of file `ipm_sim_cl.R`
 
+#' Composite likelihood simulation
+#'
 #' Simulate population by the composite likelihood model
 #'
 #' @param K a scalar, number of years.

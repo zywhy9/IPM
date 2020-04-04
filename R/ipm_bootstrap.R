@@ -1,5 +1,7 @@
 # Contents of file `ipm_bootstrap.R`
 
+#' Parametric Bootstrap Estimation
+#'
 #' Using parametric bootstrap to compute credible interval.
 #'
 #' @param result an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.

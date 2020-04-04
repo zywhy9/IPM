@@ -1,5 +1,7 @@
 # Contents of file `ipm_sim_l.R`
 
+#' True joint likelihood simulation
+#'
 #' Simulate population by the true joint likelihood model
 #'
 #' @param K a scalar, number of years.

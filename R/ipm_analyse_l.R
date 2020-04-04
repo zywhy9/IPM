@@ -1,6 +1,8 @@
 # Contents of file `ipm_analyse_l.R`
 
-#' Analysing the simulation by true joint likelihood model
+#' Analyse data using composite likelihood for a simulation study
+#'
+#' Using the true joint likelihood model to analyse the simulation by true joint likelihood model.
 #'
 #' @param data an nlists object, simulation dataset returned by ipm_sim_l.
 #' @param Plot a flag, indicates whether to save the traceplot and the density plot for MCMC outputs.
