@@ -16,7 +16,7 @@
 ipm_analyse_l <- function(data,
                         Plot=FALSE,
                         priors=NULL,
-                        maxtime=10,
+                        maxtime=5,
                         unit="mins",
                         save=20000L,
                         chain=3){
