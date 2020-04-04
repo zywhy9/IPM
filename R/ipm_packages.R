@@ -1,6 +1,12 @@
 #' @keywords internal
 #' @import sims
 #' @import simanalyse
+#' @import coda
+#' @import nlist
+#' @import mcmcr
+#' @importFrom grDevices graphics.off pdf
+#' @importFrom graphics plot
+#' @importFrom stats quantile window
 "_PACKAGE"
 
 # The following block is used by usethis to automatically manage

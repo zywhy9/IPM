@@ -20,10 +20,11 @@ ipm_coverage <- function(result,
     real <- c(rep(2,4),500,rep(0.8,3),rep(0.9,3),30,rep(0.8,4))
   }
 
+  K <- dim(result[1][[1]]$f)[3]
   n <- 2*(K-1)+2*K+2
   count <- rep(0,n)
   for(i in 1:times){
-    count <- count + as.numeric((real>=coef(res[i][[1]])[,"lower"])&(real<=coef(res[i][[1]])[,"upper"]))
+    count <- count + as.numeric((real>=coef(result[i][[1]])[,"lower"])&(real<=coef(result[i][[1]])[,"upper"]))
   }
 
   out <- count/times

@@ -26,7 +26,7 @@ ipm_bootstrap <- function(result,
                           chain=3){
 
   ## Simulation
-  summ <- sma_summarise(result, measures = "mean")
+  summ <- simanalyse::sma_summarise(result, measures = "mean")
   p_real <- summ$mcmcr1$mean$p
   f_real <- summ$mcmcr1$mean$f
   N.1_real <- round(summ$mcmcr1$mean$N1)
@@ -51,7 +51,8 @@ ipm_bootstrap <- function(result,
   ## Analyse
   res <- rep(NA, times)
   for(i in 1:times){
-    res[i] <- ipm_analyse_l(data=nlists(samp[i][[1]]),priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+    res[i] <- ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
+                            priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
   }
 
   ## Compute the Credible Interval

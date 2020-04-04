@@ -13,13 +13,14 @@ Authors@R:
            email = "y3496wan@uwaterloo.ca")
       )
 Description: Provides functions for simulating the dynamic population using two models, summarizing the output from MCMC simulations, and calaulating the credible interval by parametric bootstrap.
-License: None
+License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 Imports: 
     simanalyse,
     sims,
-    future,
+    mcmcr,
+    nlist,
     coda
 RoxygenNote: 7.1.0

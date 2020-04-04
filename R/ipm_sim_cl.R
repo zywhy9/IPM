@@ -60,6 +60,7 @@ ipm_sim_cl <- function(K=4,
   "
 
   ## Simulation
-  data <- sims_simulate(compmod, constants=nlist(K=K), latent=NA, parameters=nlist(N.1=N.1, sigma=sigma, p=p, f=f, phi=phi, R=R))
+  data <- sims::sims_simulate(compmod, constants=nlist::nlist(K=K), latent=NA,
+                              parameters=nlist::nlist(N.1=N.1, sigma=sigma, p=p, f=f, phi=phi, R=R))
   return(data)
 }

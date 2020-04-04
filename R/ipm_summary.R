@@ -9,7 +9,7 @@
 
 ipm_summary <- function(result){
 
-  summ <- sma_summarise(result, measures=c("mean", "lower.q", "upper.q", "var"))
+  summ <- simanalyse::sma_summarise(result, measures=c("mean", "lower.q", "upper.q", "var"))
 
   p.mean <- summ$mcmcr1$mean$p
   f.mean <- summ$mcmcr1$mean$f

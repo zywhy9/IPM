@@ -22,7 +22,7 @@ ipm_rmse <- function(result,
 
   post <- c()
   for(i in 1:times){
-    post <- rbind(as.matrix(as.mcmc.list(result[i][[1]])))
+    post <- rbind(as.matrix(coda::as.mcmc.list(result[i][[1]])))
   }
   se <- apply(post,1,function(x){(x-real)^2})
   rmse <- apply(se,1,function(x){sqrt(mean(x))})

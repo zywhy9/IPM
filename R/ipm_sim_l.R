@@ -99,6 +99,7 @@ ipm_sim_l <- function(K=4,
   "
 
   ## Simulation
-  data <- sims_simulate(truemod, constants=nlist(K=K), latent=NA, parameters=nlist(N.1=N.1, sigma=sigma, p=p, f=f, phi=phi, xi=xi))
+  data <- sims::sims_simulate(truemod, constants=nlist::nlist(K=K), latent=NA,
+                              parameters=nlist::nlist(N.1=N.1, sigma=sigma, p=p, f=f, phi=phi, xi=xi))
   return(data)
 }
