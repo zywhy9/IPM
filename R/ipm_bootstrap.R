@@ -10,7 +10,7 @@
 #' @param unit a character string specifying the units of time for \code{max.time}. See \code{difftime}.
 #' @param save a scalar, the number of (potentially thinned) samples to save.
 #' @param chain a scalar, the number of MCMC chains.
-#' @return a mcmcrs object, the MCMC outputs.
+#' @return a list object, containing credible interval, RMSE and coverage probability.
 #' @export
 
 
@@ -18,7 +18,7 @@ ipm_bootstrap <- function(result,
                           real=NULL,
                           priors=NULL,
                           times=1000,
-                          maxtime=10,
+                          maxtime=5,
                           unit="mins",
                           save=20000L,
                           chain=3){
@@ -49,13 +49,13 @@ ipm_bootstrap <- function(result,
   ## Analyse
   res <- rep(NA, times)
   for(i in 1:times){
-    res[i] <- ipm_analyse_l(data=nlists(samp[i][[1]]),priors=priors)
+    res[i] <- ipm_analyse_l(data=nlists(samp[i][[1]]),priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
   }
 
   ## Compute the Credible Interval
   real_mat <- c(f_real,N.1_real,p_real,phi_real,sigma_real,xi_real)
   n <- 2*(K-1)+2*K+2
-  postmean <- re <- matrix(rep(NA, times*n),ncol=n,nrow=times)
+  postmean <- re <- matrix(NA, ncol=n, nrow=times)
   colnames(postmean) <- colnames(re) <- c(paste("f[",1:K,"]",sep=""),"N1",paste("p[",1:(K-1),"]",sep=""),
                                           paste("phi[",1:(K-1),"]",sep=""),"sigma",paste("xi[",1:K,"]",sep=""))
 
@@ -67,10 +67,21 @@ ipm_bootstrap <- function(result,
   ci.ub <- real_mat - apply(re,2,function(x) quantile(x,0.025))
   ci.lb <- real_mat - apply(re,2,function(x) quantile(x,0.975))
 
+  ## Compute Variance
+  postvar <- 0
+  for(i in 1:times){
+    postvar <- postvar + (coef(res[i][[1]])[,"sd"])^2
+  }
+  evar <- postvar/times
+  names(evar) <- c(paste("f[",1:K,"]",sep=""),"N1",paste("p[",1:(K-1),"]",sep=""),
+                   paste("phi[",1:(K-1),"]",sep=""),"sigma",paste("xi[",1:K,"]",sep=""))
+
   ## Compute RMSE and Coverage Probability
   rmse <- ipm_rmse(res,times=times)
   coverage <- ipm_coverage(res, times=times)
 
+  out <- list(var=evar, lower=ci.lb, upper=ci.ub, rmse=rmse, coverage=coverage)
+  return(out)
 }
 
 

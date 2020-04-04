@@ -123,8 +123,8 @@ ipm_analyse_l <- function(data,
                                           priors,
                                           monitor=c("p","f","N1","sigma","phi","xi"),
                                           inits = list("N1"=500, f=rep(4,K),phi=rep(0.99,(K-1))),
-                                          #mode=sma_set_mode("paper", n.chains=chain, max.time=maxtime, units=unit, n.save=save))
-                                          mode=sma_set_mode("quick"))
+                                          mode=sma_set_mode("paper", n.chains=chain, max.time=maxtime, units=unit, n.save=save))
+                                          # mode=sma_set_mode("quick"))
   out2 <- subset(mcmcr::as.mcmcrs(out), pars=c("p","f","N1","sigma","phi","xi"))
 
   if(Plot){
