@@ -22,5 +22,12 @@ Imports:
     sims,
     mcmcr,
     nlist,
-    coda
+    coda,
+    doParallel,
+    foreach,
+    parallel,
+    iterators
+Suggests: 
+    testthat
 RoxygenNote: 7.1.0
+

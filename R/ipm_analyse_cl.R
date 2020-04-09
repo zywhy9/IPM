@@ -1,10 +1,10 @@
-# Contents of file `ipm_analyse.R`
+# Contents of file `ipm_analyse_cl.R`
 
 #' Analyse data using composite likelihood for a simulation study
 #'
-#' Using the composite likelihood model to analyse the simulation by true joint likelihood model.
+#' Using the composite likelihood model to analyse the simulation by composite likelihood model.
 #'
-#' @param data an nlists object, simulation dataset returned by ipm_sim_l.
+#' @param data an nlists object, simulation dataset returned by ipm_sim_cl.
 #' @param Plot a flag, indicates whether to save the traceplot and the density plot for MCMC outputs.
 #' @param priors a string of code to set the prior.
 #' @param maxtime a scalar, specifying the maximum time to spend on analysis.
@@ -15,7 +15,7 @@
 #' @export
 
 
-ipm_analyse <- function(data,
+ipm_analyse_cl <- function(data,
                         Plot=FALSE,
                         priors=NULL,
                         maxtime=5,
@@ -69,52 +69,33 @@ ipm_analyse <- function(data,
 
       B[K] ~ dpois(N[K]*f[K]/2)
 
-      # Not Marked
-      Nu[1] <- N.1
-      for(i in 2:K){
-          Nu[i] <- N[i] - sum(M[1:(i-1),i])/p[(i-1)]
-      }
-
-      # First Capture
-      xi[1] <- R[1]/(Nu[1]+B[1])
-      for(i in 2:K){
-          xi[i] <- (R[i]-sum(M[1:(i-1),i]))/(Nu[i]+B[i])
-      }
-
   "
 
   ## Transform
   K <- data[[1]]$K
-  R <- rep(NA,K)
-  Z <- rep(NA,(K-1))
-  for(i in 1:(K-1)){
-    Z[i] <- data[[1]]$Sr[i,i]-sum(data[[1]]$M[i,(i+1):K])
-    R[i] <- data[[1]]$Sr[i,i]
-  }
-  R[K] <- data[[1]]$Sr[K,K]
-
-  data[[1]]$M <- cbind(data[[1]]$M,Z)
+  M <- ifelse(is.na(data[[1]]$M),0,data[[1]]$M)
   data <- subset(data, pars=c("M","Y","K"))
-  data[[1]]$R <- R
+  data[[1]]$R <- apply(M,1,sum)
 
   ## Result
   out <- simanalyse::sma_analyse_bayesian(data,
                                           compmod,
                                           priors,
-                                          monitor=c("p","f","N1","sigma","phi","xi"),
+                                          monitor=c("p","f","N1","sigma","phi"),
                                           inits = list("N1"=500, f=rep(4,K),phi=rep(0.99,(K-1))),
                                           mode=sma_set_mode("paper", n.chains=chain, max.time=maxtime,
                                                             units=unit, n.save=save))
-                                          # mode=sma_set_mode("quick"))
-  out2 <- subset(mcmcr::as.mcmcrs(out), pars=c("p","f","N1","sigma","phi","xi"))
+                                          #mode=sma_set_mode("quick"))
+  out2 <- subset(mcmcr::as.mcmcrs(out), pars=c("p","f","N1","sigma","phi"))
 
   if(Plot){
-    pdf("plot.pdf")
+    pdf("plot_cl.pdf")
     plot(window(coda::as.mcmc.list(out2[[1]])))
     graphics.off()
   }
 
-  return(out2)
+  res <- list(result=out2, R=apply(M,1,sum))
+  return(res)
 }
 
 

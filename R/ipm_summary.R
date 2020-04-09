@@ -46,8 +46,8 @@ ipm_summary <- function(result){
 
   K <- length(f.mean)
 
-  colnames(res) <- c(paste("p[",1:(K-1),"]",sep=""), paste("f[",1:K,"]",sep=""), "N1", "sigma",
-                     paste("phi[",1:(K-1),"]",sep=""), paste("xi[",1:K,"]",sep=""))
+  colnames(res) <- c(paste0("p[",1:(K-1),"]"), paste0("f[",1:K,"]"), "N1", "sigma",
+                     paste0("phi[",1:(K-1),"]"), paste0("xi[",1:K,"]"))
 
   rownames(res) <- c("mean","var","2.5%","97.5%")
 

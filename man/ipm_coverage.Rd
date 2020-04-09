@@ -4,14 +4,16 @@
 \alias{ipm_coverage}
 \title{Coverage probability}
 \usage{
-ipm_coverage(result, real = NULL, times = 1000)
+ipm_coverage(result, real = NULL, times = 1000, type = "l")
 }
 \arguments{
-\item{result}{an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.}
+\item{result}{an mcmcrs object, the result from ipm_analyse or ipm_analyse_l or ipm_analyse_cl.}
 
 \item{real}{an list object, specifying the real value using for simulation.}
 
 \item{times}{a scalar, specifying the number of samples.}
+
+\item{type}{a string, specifying if it's from ipm_analyse_cl.}
 }
 \value{
 a mcmcrs object, the MCMC outputs.

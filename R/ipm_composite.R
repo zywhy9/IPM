@@ -1,10 +1,11 @@
-# Contents of file `ipm_bootstrap.R`
+# Contents of file `ipm_composite.R`
 
-#' Parametric Bootstrap Estimation
+#' Summary for composite likelihood model
 #'
-#' Using parametric bootstrap to compute credible interval.
+#' Estimate the coverage probability and RMSE for composite likelihood model.
 #'
-#' @param result an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.
+#' @param result an mcmcrs object, the result from ipm_analyse.
+#' @param data an nlists object, simulation dataset returned by ipm_sim_l.
 #' @param real an list object, specifying the real value using for simulation.
 #' @param priors a string of code to set the prior.
 #' @param times a scalar, specifying the number of samples.
@@ -16,7 +17,8 @@
 #' @export
 
 
-ipm_bootstrap <- function(result,
+ipm_composite <- function(result,
+                          data,
                           real=NULL,
                           priors=NULL,
                           times=1000,
@@ -32,14 +34,16 @@ ipm_bootstrap <- function(result,
   N.1_real <- round(summ$mcmcr1$mean$N1)
   sigma_real <- summ$mcmcr1$mean$sigma
   phi_real <- summ$mcmcr1$mean$phi
-  xi_real <- summ$mcmcr1$mean$xi
   K <- length(f_real)
-
+  R <- rep(NA,K-1)
+  for(i in 1:(K-1)){
+    R[i] <- data[[1]]$Sr[i,i]
+  }
   samp <- rep(NA, times)
   j <- 0
   while(j<times){
     flag <- FALSE
-    samp[(j+1)] <- tryCatch(ipm_sim_l(K=K, N.1=N.1_real, sigma=sigma_real, p=p_real, xi=xi_real, f=f_real, phi=phi_real),
+    samp[(j+1)] <- tryCatch(ipm_sim_cl(K=K, N.1=N.1_real, sigma=sigma_real, p=p_real, f=f_real, phi=phi_real, R=R),
                             error = function(e){flag <<- TRUE})
     if(flag){
       next
@@ -47,29 +51,28 @@ ipm_bootstrap <- function(result,
       j <- j + 1
     }
   }
-
   ## Analyse
   res <- rep(NA, times)
   cl <- parallel::makeCluster(spec = parallel::detectCores(logical = FALSE)) # create the parallel cluster
   doParallel::registerDoParallel(cl) # inform doParallel
 
   res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
-    IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
-                       priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+    IPM::ipm_analyse_cl(data=nlist::nlists(samp[i][[1]]),
+                        priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)$result
   }
   res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
-    IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
-                       priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+    IPM::ipm_analyse_cl(data=nlist::nlists(samp[i][[1]]),
+                        priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)$result
   }
   parallel::stopCluster(cl)
 
 
   ## Compute the Credible Interval
-  real_mat <- c(f_real,N.1_real,p_real,phi_real,sigma_real,xi_real)
-  n <- 2*(K-1)+2*K+2
+  real_mat <- c(f_real,N.1_real,p_real,phi_real,sigma_real)
+  n <- 2*(K-1)+K+2
   postmean <- re <- matrix(NA, ncol=n, nrow=times)
   colnames(postmean) <- colnames(re) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
-                                          paste0("phi[",1:(K-1),"]"),"sigma",paste0("xi[",1:K,"]"))
+                                          paste0("phi[",1:(K-1),"]"),"sigma")
 
   for(i in 1:times){
     postmean[i,] <- coef(res[i][[1]])[,2]
@@ -86,12 +89,16 @@ ipm_bootstrap <- function(result,
   }
   evar <- postvar/times
   names(evar) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
-                   paste0("phi[",1:(K-1),"]"),"sigma",paste0("xi[",1:K,"]"))
+                   paste0("phi[",1:(K-1),"]"),"sigma")
 
   ## Compute RMSE and Coverage Probability
-  rmse <- ipm_rmse(res,times=times)
-  coverage <- ipm_coverage(res, times=times)
-  coverage1 <- ipm_coverage(res, real=real_mat, times=times)
+  if(is.null(real)){
+    real <- c(rep(2,4),500,rep(0.8,3),rep(0.9,3),30)
+  }
+  rmse <- ipm_rmse(res,times=times, real=real)
+
+  coverage <- ipm_coverage(res, times=times, real=real, type="cl")
+  coverage1 <- ipm_coverage(res, real=real_mat, times=times, type="cl")
 
   out <- list(var=evar, lower=ci.lb, upper=ci.ub, rmse=rmse, coverage=coverage, coverage1=coverage1)
   return(out)

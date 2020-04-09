@@ -7,7 +7,7 @@
 #' @param result an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.
 #' @param real an list object, specifying the real value using for simulation.
 #' @param times a scalar, specifying the number of samples.
-#' @return a mcmcrs object, the MCMC outputs.
+#' @return a vector, the RMSE of each parameter.
 #' @export
 
 
