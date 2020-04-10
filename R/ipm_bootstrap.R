@@ -5,6 +5,7 @@
 #' Using parametric bootstrap to compute credible interval.
 #'
 #' @param result an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.
+#' @param type a string, specifying the model used to analyse.
 #' @param real an list object, specifying the real value using for simulation.
 #' @param priors a string of code to set the prior.
 #' @param times a scalar, specifying the number of samples.
@@ -17,6 +18,7 @@
 
 
 ipm_bootstrap <- function(result,
+                          type="l",
                           real=NULL,
                           priors=NULL,
                           times=1000,
@@ -37,11 +39,17 @@ ipm_bootstrap <- function(result,
 
   samp <- rep(NA, times)
   j <- 0
+  err <- 0
   while(j<times){
+    if(err > 10000){
+      stop("use simanalyse::sma_summarise(result, measures = \"mean\") to check if any probability is larger than 1.
+          If so, try to run ipm_analyse or ipm_analyse_l again.devt")
+    }
     flag <- FALSE
     samp[(j+1)] <- tryCatch(ipm_sim_l(K=K, N.1=N.1_real, sigma=sigma_real, p=p_real, xi=xi_real, f=f_real, phi=phi_real),
                             error = function(e){flag <<- TRUE})
     if(flag){
+      err <- err + 1
       next
     }else{
       j <- j + 1
@@ -53,14 +61,28 @@ ipm_bootstrap <- function(result,
   cl <- parallel::makeCluster(spec = parallel::detectCores(logical = FALSE)) # create the parallel cluster
   doParallel::registerDoParallel(cl) # inform doParallel
 
-  res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
-    IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
-                       priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+  if(type=="l"){
+    res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
+      IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
+                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+    }
+    res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
+      IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
+                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+    }
+  }else{
+    res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
+      IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]),
+                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+    }
+    res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
+      IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]),
+                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+    }
   }
-  res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
-    IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
-                       priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
-  }
+
+
+
   parallel::stopCluster(cl)
 
 
@@ -89,8 +111,8 @@ ipm_bootstrap <- function(result,
                    paste0("phi[",1:(K-1),"]"),"sigma",paste0("xi[",1:K,"]"))
 
   ## Compute RMSE and Coverage Probability
-  rmse <- ipm_rmse(res,times=times)
-  coverage <- ipm_coverage(res, times=times)
+  rmse <- ipm_rmse(res,real=real, times=times)
+  coverage <- ipm_coverage(res, real=real, times=times)
   coverage1 <- ipm_coverage(res, real=real_mat, times=times)
 
   out <- list(var=evar, lower=ci.lb, upper=ci.ub, rmse=rmse, coverage=coverage, coverage1=coverage1)

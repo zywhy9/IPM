@@ -16,7 +16,7 @@ ipm_coverage(result, real = NULL, times = 1000, type = "l")
 \item{type}{a string, specifying if it's from ipm_analyse_cl.}
 }
 \value{
-a mcmcrs object, the MCMC outputs.
+a vector, the coverage probability of each parameter.
 }
 \description{
 Calculate the coverage probability.

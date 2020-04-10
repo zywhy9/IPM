@@ -6,6 +6,7 @@
 \usage{
 ipm_bootstrap(
   result,
+  type = "l",
   real = NULL,
   priors = NULL,
   times = 1000,
@@ -17,6 +18,8 @@ ipm_bootstrap(
 }
 \arguments{
 \item{result}{an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.}
+
+\item{type}{a string, specifying the model used to analyse.}
 
 \item{real}{an list object, specifying the real value using for simulation.}
 

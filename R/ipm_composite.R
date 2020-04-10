@@ -41,11 +41,17 @@ ipm_composite <- function(result,
   }
   samp <- rep(NA, times)
   j <- 0
+  err <- 0
   while(j<times){
+    if(err > 10000){
+      stop("use simanalyse::sma_summarise(result, measures = \"mean\") to check if any probability is larger than 1.
+          If so, try to run ipm_analyse or ipm_analyse_l again.devt")
+    }
     flag <- FALSE
     samp[(j+1)] <- tryCatch(ipm_sim_cl(K=K, N.1=N.1_real, sigma=sigma_real, p=p_real, f=f_real, phi=phi_real, R=R),
                             error = function(e){flag <<- TRUE})
     if(flag){
+      err <- err + 1
       next
     }else{
       j <- j + 1

@@ -14,7 +14,7 @@ ipm_rmse(result, real = NULL, times = 1000)
 \item{times}{a scalar, specifying the number of samples.}
 }
 \value{
-a mcmcrs object, the MCMC outputs.
+a vector, the RMSE of each parameter.
 }
 \description{
 Calculate the root mean square error.
