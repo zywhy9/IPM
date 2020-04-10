@@ -4,8 +4,9 @@
 #'
 #' Using parametric bootstrap to compute credible interval.
 #'
-#' @param result an mcmcrs object, the result from ipm_analyse or ipm_analyse_l.
-#' @param type a string, specifying the model used to analyse.
+#' @param result an mcmcrs object, the result from ipm_analyse.
+#' @param data an nlists object, simulation dataset returned by ipm_sim.
+#' @param type a string, specifying the model used to analyse, commonly "l", "cl" and "clcl".
 #' @param real an list object, specifying the real value using for simulation.
 #' @param priors a string of code to set the prior.
 #' @param times a scalar, specifying the number of samples.
@@ -18,6 +19,7 @@
 
 
 ipm_bootstrap <- function(result,
+                          data=NULL,
                           type="l",
                           real=NULL,
                           priors=NULL,
@@ -26,97 +28,178 @@ ipm_bootstrap <- function(result,
                           unit="mins",
                           save=20000L,
                           chain=3){
+  if(type!="clcl"){
 
-  ## Simulation
-  summ <- simanalyse::sma_summarise(result, measures = "mean")
-  p_real <- summ$mcmcr1$mean$p
-  f_real <- summ$mcmcr1$mean$f
-  N.1_real <- round(summ$mcmcr1$mean$N1)
-  sigma_real <- summ$mcmcr1$mean$sigma
-  phi_real <- summ$mcmcr1$mean$phi
-  xi_real <- summ$mcmcr1$mean$xi
-  K <- length(f_real)
+    ## Simulation
+    summ <- simanalyse::sma_summarise(result, measures = "mean")
+    p_real <- summ$mcmcr1$mean$p
+    f_real <- summ$mcmcr1$mean$f
+    N.1_real <- round(summ$mcmcr1$mean$N1)
+    sigma_real <- summ$mcmcr1$mean$sigma
+    phi_real <- summ$mcmcr1$mean$phi
+    xi_real <- summ$mcmcr1$mean$xi
+    K <- length(f_real)
 
-  samp <- rep(NA, times)
-  j <- 0
-  err <- 0
-  while(j<times){
-    if(err > 10000){
-      stop("use simanalyse::sma_summarise(result, measures = \"mean\") to check if any probability is larger than 1.
+    samp <- rep(NA, times)
+    j <- 0
+    err <- 0
+    while(j<times){
+      if(err > 10000){
+        stop("use simanalyse::sma_summarise(result, measures = \"mean\") to check if any probability is larger than 1.
           If so, try to run ipm_analyse or ipm_analyse_l again.devt")
+      }
+      flag <- FALSE
+      samp[(j+1)] <- tryCatch(ipm_sim(K=K, N.1=N.1_real, sigma=sigma_real, p=p_real, xi=xi_real, f=f_real, phi=phi_real),
+                              error = function(e){flag <<- TRUE})
+      if(flag){
+        err <- err + 1
+        next
+      }else{
+        j <- j + 1
+      }
     }
-    flag <- FALSE
-    samp[(j+1)] <- tryCatch(ipm_sim_l(K=K, N.1=N.1_real, sigma=sigma_real, p=p_real, xi=xi_real, f=f_real, phi=phi_real),
-                            error = function(e){flag <<- TRUE})
-    if(flag){
-      err <- err + 1
-      next
+
+    ## Analyse
+    res <- rep(NA, times)
+    cl <- parallel::makeCluster(spec = parallel::detectCores(logical = FALSE)) # create the parallel cluster
+    doParallel::registerDoParallel(cl) # inform doParallel
+
+    if(type=="l"){
+      res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
+        IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]), model="ll",
+                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+      }
+      res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
+        IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]), model="ll",
+                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+      }
     }else{
-      j <- j + 1
-    }
-  }
-
-  ## Analyse
-  res <- rep(NA, times)
-  cl <- parallel::makeCluster(spec = parallel::detectCores(logical = FALSE)) # create the parallel cluster
-  doParallel::registerDoParallel(cl) # inform doParallel
-
-  if(type=="l"){
-    res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
-      IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
+      res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
+        IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]), model="lcl",
                          priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
-    }
-    res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
-      IPM::ipm_analyse_l(data=nlist::nlists(samp[i][[1]]),
+      }
+      res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
+        IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]), model="lcl",
                          priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+      }
     }
+
+    parallel::stopCluster(cl)
+
+    ## Compute the Credible Interval
+    real_mat <- c(f_real,N.1_real,p_real,phi_real,sigma_real,xi_real)
+    n <- 2*(K-1)+2*K+2
+    postmean <- re <- matrix(NA, ncol=n, nrow=times)
+    colnames(postmean) <- colnames(re) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
+                                            paste0("phi[",1:(K-1),"]"),"sigma",paste0("xi[",1:K,"]"))
+
+    for(i in 1:times){
+      postmean[i,] <- coef(res[i][[1]])[,2]
+      re[i,] <- postmean[i,]-real_mat
+    }
+
+    ci.ub <- real_mat - apply(re,2,function(x) quantile(x,0.025))
+    ci.lb <- real_mat - apply(re,2,function(x) quantile(x,0.975))
+
+    ## Compute Variance
+    postvar <- 0
+    for(i in 1:times){
+      postvar <- postvar + (coef(res[i][[1]])[,"sd"])^2
+    }
+    evar <- postvar/times
+    names(evar) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
+                     paste0("phi[",1:(K-1),"]"),"sigma",paste0("xi[",1:K,"]"))
+
+    ## Compute RMSE and Coverage Probability
+    rmse <- ipm_rmse(res,real=real, times=times)
+    coverage <- ipm_coverage(res, real=real, times=times)
+    coverage1 <- ipm_coverage(res, real=real_mat, times=times)
+
+    out <- list(var=evar, lower=ci.lb, upper=ci.ub, rmse=rmse, coverage=coverage, coverage1=coverage1)
+    return(out)
   }else{
+    ## Simulation
+    summ <- simanalyse::sma_summarise(result, measures = "mean")
+    p_real <- summ$mcmcr1$mean$p
+    f_real <- summ$mcmcr1$mean$f
+    N.1_real <- round(summ$mcmcr1$mean$N1)
+    sigma_real <- summ$mcmcr1$mean$sigma
+    phi_real <- summ$mcmcr1$mean$phi
+    K <- length(f_real)
+    R <- rep(NA,K-1)
+    for(i in 1:(K-1)){
+      R[i] <- data[[1]]$Sr[i,i]
+    }
+    samp <- rep(NA, times)
+    j <- 0
+    err <- 0
+    while(j<times){
+      if(err > 10000){
+        stop("use simanalyse::sma_summarise(result, measures = \"mean\") to check if any probability is larger than 1.
+          If so, try to run ipm_analyse or ipm_analyse_l again.devt")
+      }
+      flag <- FALSE
+      samp[(j+1)] <- tryCatch(ipm_sim(model="cl",K=K, N.1=N.1_real, sigma=sigma_real, p=p_real, f=f_real, phi=phi_real, R=R),
+                              error = function(e){flag <<- TRUE})
+      if(flag){
+        err <- err + 1
+        next
+      }else{
+        j <- j + 1
+      }
+    }
+    ## Analyse
+    res <- rep(NA, times)
+    cl <- parallel::makeCluster(spec = parallel::detectCores(logical = FALSE)) # create the parallel cluster
+    doParallel::registerDoParallel(cl) # inform doParallel
+
     res[1:(times/2)] <- foreach(i=1:(times/2),.combine = "c") %dopar% {
-      IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]),
-                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+      IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]),model="clcl",
+                       priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)$result
     }
     res[(times/2+1):times] <- foreach(i=(times/2+1):times,.combine = "c") %dopar% {
-      IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]),
-                         priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)
+      IPM::ipm_analyse(data=nlist::nlists(samp[i][[1]]),model="clcl",
+                       priors=priors,maxtime=maxtime,unit=unit,save=save,chain=chain)$result
     }
+
+    parallel::stopCluster(cl)
+
+    ## Compute the Credible Interval
+    real_mat <- c(f_real,N.1_real,p_real,phi_real,sigma_real)
+    n <- 2*(K-1)+K+2
+    postmean <- re <- matrix(NA, ncol=n, nrow=times)
+    colnames(postmean) <- colnames(re) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
+                                            paste0("phi[",1:(K-1),"]"),"sigma")
+
+    for(i in 1:times){
+      postmean[i,] <- coef(res[i][[1]])[,2]
+      re[i,] <- postmean[i,]-real_mat
+    }
+
+    ci.ub <- real_mat - apply(re,2,function(x) quantile(x,0.025))
+    ci.lb <- real_mat - apply(re,2,function(x) quantile(x,0.975))
+
+    ## Compute Variance
+    postvar <- 0
+    for(i in 1:times){
+      postvar <- postvar + (coef(res[i][[1]])[,"sd"])^2
+    }
+    evar <- postvar/times
+    names(evar) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
+                     paste0("phi[",1:(K-1),"]"),"sigma")
+
+    ## Compute RMSE and Coverage Probability
+    if(is.null(real)){
+      real <- c(rep(2,4),500,rep(0.8,3),rep(0.9,3),30)
+    }
+    rmse <- ipm_rmse(res,times=times, real=real)
+
+    coverage <- ipm_coverage(res, times=times, real=real, type="cl")
+    coverage1 <- ipm_coverage(res, real=real_mat, times=times, type="cl")
+
+    out <- list(var=evar, lower=ci.lb, upper=ci.ub, rmse=rmse, coverage=coverage, coverage1=coverage1)
+    return(out)
   }
-
-
-
-  parallel::stopCluster(cl)
-
-
-  ## Compute the Credible Interval
-  real_mat <- c(f_real,N.1_real,p_real,phi_real,sigma_real,xi_real)
-  n <- 2*(K-1)+2*K+2
-  postmean <- re <- matrix(NA, ncol=n, nrow=times)
-  colnames(postmean) <- colnames(re) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
-                                          paste0("phi[",1:(K-1),"]"),"sigma",paste0("xi[",1:K,"]"))
-
-  for(i in 1:times){
-    postmean[i,] <- coef(res[i][[1]])[,2]
-    re[i,] <- postmean[i,]-real_mat
-  }
-
-  ci.ub <- real_mat - apply(re,2,function(x) quantile(x,0.025))
-  ci.lb <- real_mat - apply(re,2,function(x) quantile(x,0.975))
-
-  ## Compute Variance
-  postvar <- 0
-  for(i in 1:times){
-    postvar <- postvar + (coef(res[i][[1]])[,"sd"])^2
-  }
-  evar <- postvar/times
-  names(evar) <- c(paste0("f[",1:K,"]"),"N1",paste0("p[",1:(K-1),"]"),
-                   paste0("phi[",1:(K-1),"]"),"sigma",paste0("xi[",1:K,"]"))
-
-  ## Compute RMSE and Coverage Probability
-  rmse <- ipm_rmse(res,real=real, times=times)
-  coverage <- ipm_coverage(res, real=real, times=times)
-  coverage1 <- ipm_coverage(res, real=real_mat, times=times)
-
-  out <- list(var=evar, lower=ci.lb, upper=ci.ub, rmse=rmse, coverage=coverage, coverage1=coverage1)
-  return(out)
 }
 
 

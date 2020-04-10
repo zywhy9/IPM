@@ -2,7 +2,7 @@ context("coverage")
 
 test_that("coverage is correct",{
   set.seed(10)
-  data <- ipm_sim_l()
+  data <- ipm_sim()
   result <- ipm_analyse(data,maxtime=1,unit="secs",save=10, chain=1)
   cp <- ipm_coverage(result,times=1)
 

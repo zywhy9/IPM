@@ -2,22 +2,27 @@
 % Please edit documentation in R/ipm_analyse.R
 \name{ipm_analyse}
 \alias{ipm_analyse}
-\title{Analyse data using composite likelihood for a simulation study}
+\title{Analyse data for a simulation study}
 \usage{
 ipm_analyse(
   data,
   Plot = FALSE,
+  model = "lcl",
   priors = NULL,
   maxtime = 5,
   unit = "mins",
   save = 20000L,
-  chain = 3
+  chain = 3,
+  moni,
+  inits
 )
 }
 \arguments{
-\item{data}{an nlists object, simulation dataset returned by ipm_sim_l.}
+\item{data}{an nlists object, simulation dataset returned by ipm_sim.}
 
 \item{Plot}{a flag, indicates whether to save the traceplot and the density plot for MCMC outputs.}
+
+\item{model}{a string, specifying the model of interest. Default is "lcl", which means using composite likelihood to analyse the simulation from true joint likelihood. Similarly, you can use "ll" or "clcl".}
 
 \item{priors}{a string of code to set the prior.}
 
@@ -28,10 +33,14 @@ ipm_analyse(
 \item{save}{a scalar, the number of (potentially thinned) samples to save.}
 
 \item{chain}{a scalar, the number of MCMC chains.}
+
+\item{moni}{a vector, specifying the parameters want to monitor.}
+
+\item{inits}{a vector, specifying the initial values of parameters.}
 }
 \value{
 a mcmcrs object, the MCMC outputs, and plots (If plot=TRUE).
 }
 \description{
-Using the composite likelihood model to analyse the simulation by true joint likelihood model.
+Using the model of interest to analyse the simulation by the model of interest.
 }

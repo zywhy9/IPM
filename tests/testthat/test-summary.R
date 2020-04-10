@@ -2,7 +2,7 @@ context("summary")
 
 test_that("Summary is correct",{
   set.seed(10)
-  data <- ipm_sim_l()
+  data <- ipm_sim()
   result <- ipm_analyse(data,maxtime=1,unit="secs",save=10,chain=1)
   sum1 <- ipm_summary(result)
 
