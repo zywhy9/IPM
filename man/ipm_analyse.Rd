@@ -14,7 +14,7 @@ ipm_analyse(
   save = 20000L,
   chain = 3,
   moni,
-  inits
+  inits = NULL
 )
 }
 \arguments{
@@ -34,9 +34,9 @@ ipm_analyse(
 
 \item{chain}{a scalar, the number of MCMC chains.}
 
-\item{moni}{a vector, specifying the parameters want to monitor.}
+\item{moni}{a vector of string or a string, specifying the parameters want to monitor.}
 
-\item{inits}{a vector, specifying the initial values of parameters.}
+\item{inits}{a list, specifying the initial values of parameters.}
 }
 \value{
 a mcmcrs object, the MCMC outputs, and plots (If plot=TRUE).

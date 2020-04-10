@@ -12,8 +12,8 @@
 #' @param unit a character string specifying the units of time for \code{max.time}. See \code{difftime}.
 #' @param save a scalar, the number of (potentially thinned) samples to save.
 #' @param chain a scalar, the number of MCMC chains.
-#' @param moni a vector, specifying the parameters want to monitor.
-#' @param inits a vector, specifying the initial values of parameters.
+#' @param moni a vector of string or a string, specifying the parameters want to monitor.
+#' @param inits a list, specifying the initial values of parameters.
 #' @return a mcmcrs object, the MCMC outputs, and plots (If plot=TRUE).
 #' @export
 
@@ -27,7 +27,7 @@ ipm_analyse <- function(data,
                         save=20000L,
                         chain=3,
                         moni,
-                        inits){
+                        inits=NULL){
   if(model=="lcl"){
     if(is.null(priors)){
       priors <- "N.1 <- round(N1)
@@ -313,6 +313,9 @@ ipm_analyse <- function(data,
     #mode=sma_set_mode("quick"))
     out2 <- subset(mcmcr::as.mcmcrs(out), pars=c("p","f","N1","sigma","phi"))
   }else{
+    if(is.null(inits)){
+      inits <- list()
+    }
     out <- simanalyse::sma_analyse_bayesian(data,
                                             model,
                                             priors,
